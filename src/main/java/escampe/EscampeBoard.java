@@ -352,9 +352,33 @@ public class EscampeBoard implements Partie1 {
         }
     }
 
+    /**
+     * Vérifie si la partie est terminée (une licorne a été capturée)
+     */
     @Override
     public boolean gameOver() {
-        return isGameOver();
+        // La partie est terminée si une licorne a été capturée
+        boolean whiteLicorneFound = false;
+        boolean blackLicorneFound = false;
+
+        for (int row = 0; row < GRID_SIZE; row++) {
+            for (int col = 0; col < GRID_SIZE; col++) {
+                if (boardGrid[row][col] == Piece.LICORNE_BLANCHE) {
+                    whiteLicorneFound = true;
+                }
+                if (boardGrid[row][col] == Piece.LICORNE_NOIRE) {
+                    blackLicorneFound = true;
+                }
+            }
+        }
+
+        // La partie est terminée si une des licornes est absente
+        // (et que les deux joueurs ont placé leurs pièces)
+        if (blackPlaced && whitePlaced) {
+            return !whiteLicorneFound || !blackLicorneFound;
+        }
+
+        return false;
     }
 
     // ---------------------- Méthodes de jeu ---------------------
@@ -598,34 +622,6 @@ public class EscampeBoard implements Partie1 {
     }
 
     /**
-     * Vérifie si la partie est terminée (une licorne a été capturée)
-     */
-    public boolean isGameOver() {
-        // La partie est terminée si une licorne a été capturée
-        boolean whiteLicorneFound = false;
-        boolean blackLicorneFound = false;
-
-        for (int row = 0; row < GRID_SIZE; row++) {
-            for (int col = 0; col < GRID_SIZE; col++) {
-                if (boardGrid[row][col] == Piece.LICORNE_BLANCHE) {
-                    whiteLicorneFound = true;
-                }
-                if (boardGrid[row][col] == Piece.LICORNE_NOIRE) {
-                    blackLicorneFound = true;
-                }
-            }
-        }
-
-        // La partie est terminée si une des licornes est absente
-        // (et que les deux joueurs ont placé leurs pièces)
-        if (blackPlaced && whitePlaced) {
-            return !whiteLicorneFound || !blackLicorneFound;
-        }
-
-        return false;
-    }
-
-    /**
      * Retourne le gagnant de la partie
      * 
      * @return "noir" si noir a gagné, "blanc" si blanc a gagné, null si partie non
@@ -809,7 +805,7 @@ public class EscampeBoard implements Partie1 {
 
         // Test 8 : Sauvegarde et lecture d'un fichier
         System.out.println("\n--- Test 8 : Sauvegarde et lecture ---");
-        String testFile = "test_escampe.txt";
+        String testFile = "test_sauvegarde.txt";
         board.saveToFile(testFile);
         System.out.println("Plateau sauvegardé dans " + testFile);
 
@@ -817,38 +813,6 @@ public class EscampeBoard implements Partie1 {
         boardFromFile.setFromFile(testFile);
         System.out.println("Plateau lu depuis le fichier :");
         System.out.println(boardFromFile);
-
-        // Test 9 : Configuration de l'exemple du PDF
-        System.out.println("--- Test 9 : Configuration de l'exemple du PDF ---");
-        EscampeBoard exampleBoard = new EscampeBoard();
-        // Configuration : Noirs : licorne en C1 ; paladins en A1, B1, C4, D4, A6
-        // Blancs : licorne en C6 ; paladins en A4, C5, C2, F6, F3
-        // Créer le fichier de test
-        try (PrintWriter writer = new PrintWriter(new FileWriter("exemple_pdf.txt"))) {
-            writer.println("% ABCDEF");
-            writer.println("01 nnN--- 01");
-            writer.println("02 --b--- 02");
-            writer.println("03 -----b 03");
-            writer.println("04 b-nn-- 04");
-            writer.println("05 --b--- 05");
-            writer.println("06 n-B--b 06");
-            writer.println("% ABCDEF");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        exampleBoard.setFromFile("exemple_pdf.txt");
-        // Le dernier coup noir l'a amené en D4 (liseré 2)
-        exampleBoard.setLastMove(3, 3); // D4 = col 3, row 3
-        System.out.println("Configuration de l'exemple :");
-        System.out.println(exampleBoard);
-
-        // Vérifier que C2-C1 est un coup valide (capture de la licorne)
-        System.out.println("Le coup C2-D2-D1-C1 doit parcourir 3 cases (liseré 3 depuis C2)");
-        System.out.println(
-                "Liseré de D4 (dernier coup) : " + LISERE_MAP[3][3] + " (doit jouer depuis une case liseré 2)");
-        System.out.println("Liseré de C2 : " + LISERE_MAP[1][2] + " (le paladin blanc ne peut pas jouer)");
-        System.out.println("Liseré de F6 : " + LISERE_MAP[5][5] + " (le paladin blanc peut jouer, liseré 2)");
 
         System.out.println("\n=== Fin des tests ===");
     }
