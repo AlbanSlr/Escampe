@@ -1,7 +1,4 @@
-package games.escampe;
-
-import iialib.games.model.IBoard;
-import iialib.games.model.Score;
+package escampe;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -10,7 +7,7 @@ import java.util.Set;
 
 /**
  * Classe représentant le plateau du jeu Escampe
- * Implémente l'interface Partie1 (opérations de base) et IBoard (pour l'IA)
+ * Implémente l'interface Partie1 (opérations de base)
  * 
  * Le plateau est un tableau 6x6 avec des cases de type liseré 1, 2 ou 3
  * qui déterminent la distance de déplacement possible.
@@ -20,7 +17,7 @@ import java.util.Set;
  * - row : 0-5 correspond aux lignes 1-6
  * - col : 0-5 correspond aux colonnes A-F
  */
-public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, EscampeBoard> {
+public class EscampeBoard implements Partie1 {
 
     // Taille du plateau
     public static final int GRID_SIZE = 6;
@@ -360,9 +357,11 @@ public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, E
         return isGameOver();
     }
 
-    // ---------------------- Interface IBoard ---------------------
+    // ---------------------- Méthodes de jeu ---------------------
 
-    @Override
+    /**
+     * Calcule tous les coups possibles pour un joueur
+     */
     public ArrayList<EscampeMove> possibleMoves(EscampeRole playerRole) {
         ArrayList<EscampeMove> moves = new ArrayList<>();
 
@@ -575,14 +574,18 @@ public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, E
         }
     }
 
-    @Override
+    /**
+     * Joue un coup et retourne un nouveau plateau (sans modifier l'original)
+     */
     public EscampeBoard play(EscampeMove move, EscampeRole playerRole) {
         EscampeBoard newBoard = new EscampeBoard(this);
         newBoard.applyMove(move, playerRole);
         return newBoard;
     }
 
-    @Override
+    /**
+     * Vérifie si un coup est valide pour un joueur
+     */
     public boolean isValidMove(EscampeMove move, EscampeRole playerRole) {
         if (move.isPass()) {
             // Vérifier qu'aucun autre coup n'est possible
@@ -594,7 +597,9 @@ public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, E
         return possibles.contains(move);
     }
 
-    @Override
+    /**
+     * Vérifie si la partie est terminée (une licorne a été capturée)
+     */
     public boolean isGameOver() {
         // La partie est terminée si une licorne a été capturée
         boolean whiteLicorneFound = false;
@@ -620,9 +625,13 @@ public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, E
         return false;
     }
 
-    @Override
-    public ArrayList<Score<EscampeRole>> getScores() {
-        // Déterminer le score final
+    /**
+     * Retourne le gagnant de la partie
+     * 
+     * @return "noir" si noir a gagné, "blanc" si blanc a gagné, null si partie non
+     *         terminée
+     */
+    public String getWinner() {
         boolean whiteLicorneFound = false;
         boolean blackLicorneFound = false;
 
@@ -637,23 +646,12 @@ public class EscampeBoard implements Partie1, IBoard<EscampeMove, EscampeRole, E
             }
         }
 
-        ArrayList<Score<EscampeRole>> scores = new ArrayList<>();
-
         if (!blackLicorneFound) {
-            // Blanc a gagné
-            scores.add(new Score<>(EscampeRole.BLANC, Score.Status.WIN, 1));
-            scores.add(new Score<>(EscampeRole.NOIR, Score.Status.LOOSE, -1));
+            return "blanc"; // Blanc a capturé la licorne noire
         } else if (!whiteLicorneFound) {
-            // Noir a gagné
-            scores.add(new Score<>(EscampeRole.NOIR, Score.Status.WIN, 1));
-            scores.add(new Score<>(EscampeRole.BLANC, Score.Status.LOOSE, -1));
-        } else {
-            // Partie non terminée ou nulle
-            scores.add(new Score<>(EscampeRole.BLANC, Score.Status.TIE, 0));
-            scores.add(new Score<>(EscampeRole.NOIR, Score.Status.TIE, 0));
+            return "noir"; // Noir a capturé la licorne blanche
         }
-
-        return scores;
+        return null; // Partie non terminée
     }
 
     // ---------------------- Autres méthodes ---------------------

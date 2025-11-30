@@ -1,4 +1,4 @@
-package games.escampe;
+package escampe;
 
 public interface Partie1 {
     /**

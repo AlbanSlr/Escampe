@@ -35,8 +35,6 @@ dependencies {
 }
 
 // Configuration de l'application
-// IMPORTANT: Remplacez 'your.package.MainClass' par le chemin complet de votre classe principale
 application {
-    mainClass = 'your.package.MainClass' // Par exemple: 'iialib.games.algs.YourMainClass'
+    mainClass = 'escampe.EscampeBoard'
 }
-

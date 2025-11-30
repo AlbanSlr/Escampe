@@ -1,6 +1,4 @@
-package games.escampe;
-
-import iialib.games.model.IMove;
+package escampe;
 
 /**
  * Classe représentant un coup dans le jeu Escampe
@@ -11,7 +9,7 @@ import iialib.games.model.IMove;
  * 2. Déplacement : "B1-D1" (case départ - case arrivée)
  * 3. Passer son tour : "E"
  */
-public class EscampeMove implements IMove {
+public class EscampeMove {
 
     // Type de coup
     public enum MoveType {

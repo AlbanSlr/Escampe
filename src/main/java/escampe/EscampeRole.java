@@ -1,13 +1,11 @@
-package games.escampe;
-
-import iialib.games.model.IRole;
+package escampe;
 
 /**
  * Enumération représentant les rôles (couleurs) des joueurs dans le jeu Escampe
  * NOIR : Le joueur noir, qui choisit son bord et place ses pièces en premier
  * BLANC : Le joueur blanc, qui joue en premier après le placement
  */
-public enum EscampeRole implements IRole {
+public enum EscampeRole {
     NOIR,
     BLANC;
 
