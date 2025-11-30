@@ -267,12 +267,26 @@ public class EscampeBoard implements Partie1 {
         }
     }
 
+    /**
+     * Vérifie si un coup est valide pour un joueur
+     */
     @Override
     public boolean isValidMove(String move, String player) {
         try {
             EscampeMove m = EscampeMove.parse(move);
-            EscampeRole role = EscampeRole.fromString(player);
-            return isValidMove(m, role);
+            String[] possibles = possiblesMoves(player);
+
+            if (m.isPass()) {
+                // Vérifier qu'aucun autre coup n'est possible
+                return possibles.length == 1 && possibles[0].equals("PASS");
+            }
+
+            for (String possible : possibles) {
+                if (possible.equals(move)) {
+                    return true;
+                }
+            }
+            return false;
         } catch (IllegalArgumentException e) {
             return false;
         }
@@ -280,8 +294,44 @@ public class EscampeBoard implements Partie1 {
 
     @Override
     public String[] possiblesMoves(String player) {
-        EscampeRole role = EscampeRole.fromString(player);
-        ArrayList<EscampeMove> moves = possibleMoves(role);
+        EscampeRole playerRole = EscampeRole.fromString(player);
+        ArrayList<EscampeMove> moves = new ArrayList<>();
+
+        // Phase de placement
+        if (!blackPlaced && playerRole == EscampeRole.NOIR) {
+            moves.addAll(generatePlacements(4, 5)); // rows 4-5 = lignes 5-6
+        } else if (blackPlaced && !whitePlaced && playerRole == EscampeRole.BLANC) {
+            boolean blackOnTop = isBlackOnTop();
+            if (blackOnTop) {
+                moves.addAll(generatePlacements(0, 1)); // rows 0-1 = lignes 1-2
+            } else {
+                moves.addAll(generatePlacements(4, 5)); // rows 4-5 = lignes 5-6
+            }
+        } else {
+            // Phase de jeu normale
+            int requiredLisere = -1;
+            if (lastMoveToCol >= 0 && lastMoveToRow >= 0) {
+                requiredLisere = LISERE_MAP[lastMoveToRow][lastMoveToCol];
+            }
+
+            // Trouver toutes les pièces du joueur
+            for (int row = 0; row < GRID_SIZE; row++) {
+                for (int col = 0; col < GRID_SIZE; col++) {
+                    Piece piece = boardGrid[row][col];
+                    if (piece.belongsTo(playerRole)) {
+                        int pieceLisere = LISERE_MAP[row][col];
+                        if (requiredLisere == -1 || pieceLisere == requiredLisere) {
+                            moves.addAll(generateMovesForPiece(row, col, pieceLisere));
+                        }
+                    }
+                }
+            }
+
+            // Si aucun coup possible, on peut passer son tour
+            if (moves.isEmpty()) {
+                moves.add(new EscampeMove()); // PASS
+            }
+        }
 
         String[] result = new String[moves.size()];
         for (int i = 0; i < moves.size(); i++) {
@@ -381,63 +431,7 @@ public class EscampeBoard implements Partie1 {
         return false;
     }
 
-    // ---------------------- Méthodes de jeu ---------------------
-
-    /**
-     * Calcule tous les coups possibles pour un joueur
-     */
-    public ArrayList<EscampeMove> possibleMoves(EscampeRole playerRole) {
-        ArrayList<EscampeMove> moves = new ArrayList<>();
-
-        // Phase de placement
-        if (!blackPlaced && playerRole == EscampeRole.NOIR) {
-            // Noir doit placer ses pièces sur les lignes 5-6 (haut) ou 1-2 (bas)
-            // On génère les placements sur les deux premières lignes du haut (5-6)
-            moves.addAll(generatePlacements(4, 5)); // rows 4-5 = lignes 5-6
-            return moves;
-        }
-
-        if (blackPlaced && !whitePlaced && playerRole == EscampeRole.BLANC) {
-            // Blanc doit placer ses pièces sur le bord opposé
-            // On détermine où noir a placé ses pièces
-            boolean blackOnTop = isBlackOnTop();
-            if (blackOnTop) {
-                moves.addAll(generatePlacements(0, 1)); // rows 0-1 = lignes 1-2
-            } else {
-                moves.addAll(generatePlacements(4, 5)); // rows 4-5 = lignes 5-6
-            }
-            return moves;
-        }
-
-        // Phase de jeu normale
-        int requiredLisere = -1;
-        if (lastMoveToCol >= 0 && lastMoveToRow >= 0) {
-            requiredLisere = LISERE_MAP[lastMoveToRow][lastMoveToCol];
-        }
-
-        // Trouver toutes les pièces du joueur
-        for (int row = 0; row < GRID_SIZE; row++) {
-            for (int col = 0; col < GRID_SIZE; col++) {
-                Piece piece = boardGrid[row][col];
-                if (piece.belongsTo(playerRole)) {
-                    int pieceLisere = LISERE_MAP[row][col];
-
-                    // Vérifier si la pièce est sur une case du bon liseré
-                    if (requiredLisere == -1 || pieceLisere == requiredLisere) {
-                        // Générer tous les déplacements possibles pour cette pièce
-                        moves.addAll(generateMovesForPiece(row, col, pieceLisere));
-                    }
-                }
-            }
-        }
-
-        // Si aucun coup possible, on peut passer son tour
-        if (moves.isEmpty()) {
-            moves.add(new EscampeMove()); // PASS
-        }
-
-        return moves;
-    }
+    // ---------------------- Méthodes internes ---------------------
 
     /**
      * Vérifie si les noirs sont placés sur le haut du plateau
@@ -596,29 +590,6 @@ public class EscampeBoard implements Partie1 {
             explorePaths(startRow, startCol, newCol, newRow, remaining - 1, visited, moves);
             visited.remove(key);
         }
-    }
-
-    /**
-     * Joue un coup et retourne un nouveau plateau (sans modifier l'original)
-     */
-    public EscampeBoard play(EscampeMove move, EscampeRole playerRole) {
-        EscampeBoard newBoard = new EscampeBoard(this);
-        newBoard.applyMove(move, playerRole);
-        return newBoard;
-    }
-
-    /**
-     * Vérifie si un coup est valide pour un joueur
-     */
-    public boolean isValidMove(EscampeMove move, EscampeRole playerRole) {
-        if (move.isPass()) {
-            // Vérifier qu'aucun autre coup n'est possible
-            ArrayList<EscampeMove> possibles = possibleMoves(playerRole);
-            return possibles.size() == 1 && possibles.get(0).isPass();
-        }
-
-        ArrayList<EscampeMove> possibles = possibleMoves(playerRole);
-        return possibles.contains(move);
     }
 
     /**
@@ -813,6 +784,134 @@ public class EscampeBoard implements Partie1 {
         boardFromFile.setFromFile(testFile);
         System.out.println("Plateau lu depuis le fichier :");
         System.out.println(boardFromFile);
+
+        // Test 9 : Simulation d'une fin de partie (capture de la licorne)
+        System.out.println("--- Test 9 : Test de fin de partie ---");
+        EscampeBoard endGameBoard = new EscampeBoard();
+        // Placement des pièces pour simuler une situation de fin de partie
+        // Noir place ses pièces
+        endGameBoard.play("C6/A6/B6/D6/E6/F6", "noir");
+        // Blanc place ses pièces avec la licorne en position vulnérable
+        endGameBoard.play("C1/A1/B1/D1/E1/F1", "blanc");
+        System.out.println("Configuration initiale :");
+        System.out.println(endGameBoard);
+        System.out.println("Partie terminée ? " + endGameBoard.gameOver());
+        System.out.println("Gagnant : " + endGameBoard.getWinner());
+
+        // Simuler quelques coups pour amener un paladin noir vers la licorne blanche
+        // Blanc joue (premier coup libre)
+        endGameBoard.play("A1-A2", "blanc"); // Paladin blanc va sur A2 (liseré 3)
+        System.out.println("Après A1-A2 (blanc) :");
+        System.out.println(endGameBoard);
+
+        // Noir doit jouer depuis une case liseré 3
+        // A6 est liseré 3, on peut aller vers C4 (3 cases)
+        endGameBoard.play("A6-A3", "noir"); // Paladin noir va sur A3 (liseré 2)
+        System.out.println("Après A6-A3 (noir) :");
+        System.out.println(endGameBoard);
+
+        // Blanc doit jouer depuis liseré 2
+        endGameBoard.play("B1-B3", "blanc"); // B1 est liseré 2, va sur B3 (liseré 3)
+        System.out.println("Après B1-B3 (blanc) :");
+        System.out.println(endGameBoard);
+
+        // Noir doit jouer depuis liseré 3, A3 est liseré 2 donc ne peut pas jouer
+        // B6 est liseré 2, D6 est liseré 1, E6 est liseré 3, F6 est liseré 2
+        // Le paladin en E6 (liseré 1) ne peut pas jouer non plus
+        // Vérifions les coups possibles
+        String[] noirCoups = endGameBoard.possiblesMoves("noir");
+        System.out.println("Coups possibles pour noir (liseré requis: " + endGameBoard.getLastMoveLisere() + ") :");
+        for (String coup : noirCoups) {
+            System.out.println("  " + coup);
+        }
+
+        // Créer une configuration où noir peut capturer la licorne blanche
+        System.out.println("\n--- Test 10 : Capture de la licorne ---");
+        EscampeBoard captureBoard = new EscampeBoard();
+        captureBoard.play("C6/A6/B6/D6/E6/F6", "noir");
+        captureBoard.play("B2/A1/C1/D1/E1/F1", "blanc"); // Licorne blanche en B2
+        System.out.println("Configuration avec licorne blanche en B2 :");
+        System.out.println(captureBoard);
+
+        // Blanc joue d'abord (coup libre)
+        captureBoard.play("A1-A2", "blanc"); // A1 liseré 1, va sur A2 (liseré 3)
+        System.out.println("Après A1-A2 (blanc) - liseré 3 :");
+        System.out.println(captureBoard);
+
+        // Noir doit jouer depuis liseré 3. A6 est liseré 3
+        // A6 peut aller sur A3 (3 cases) - liseré 2
+        captureBoard.play("A6-A3", "noir");
+        System.out.println("Après A6-A3 (noir) - liseré 2 :");
+        System.out.println(captureBoard);
+
+        // Blanc doit jouer depuis liseré 2. B2 (licorne) est liseré 1, donc ne peut pas
+        // jouer
+        // Vérifier les coups possibles
+        String[] blancCoups = captureBoard.possiblesMoves("blanc");
+        System.out.println("Coups possibles pour blanc (liseré requis: 2) :");
+        for (String coup : blancCoups) {
+            System.out.println("  " + coup);
+        }
+
+        // Simuler la capture : on crée un plateau où la capture est possible
+        System.out.println("\n--- Test 11 : Fin de partie effective ---");
+        EscampeBoard finalBoard = new EscampeBoard();
+        finalBoard.play("C2/A6/B6/D6/E6/F6", "noir"); // Licorne noire en C2
+        finalBoard.play("C4/A1/B1/D1/E1/F1", "blanc"); // Licorne blanche en C4
+        System.out.println("Configuration :");
+        System.out.println(finalBoard);
+        System.out.println("Partie terminée ? " + finalBoard.gameOver());
+
+        // Blanc joue (coup libre) - on fait jouer le paladin A1 vers A3 (liseré 2)
+        finalBoard.play("A1-A2", "blanc"); // liseré 3
+
+        // Noir joue depuis liseré 3 - C2 est liseré 3!
+        // La licorne noire peut capturer... non, seuls les paladins peuvent capturer
+        // A6 est liseré 3, peut aller en A3 (3 cases)
+        finalBoard.play("A6-A3", "noir"); // vers liseré 2
+
+        // On simule directement une capture en modifiant le plateau
+        // Créons un plateau où un paladin noir est adjacent à la licorne blanche
+        System.out.println("\nSimulation de capture directe :");
+        EscampeBoard captureDirecte = new EscampeBoard();
+        captureDirecte.play("C6/C3/B6/D6/E6/F6", "noir"); // Paladin noir en C3 (liseré 1)
+        captureDirecte.play("C1/A1/B1/D1/E1/F1", "blanc"); // Licorne blanche en C1 (liseré 2)
+        System.out.println("Avant capture :");
+        System.out.println(captureDirecte);
+        System.out.println("Partie terminée ? " + captureDirecte.gameOver());
+
+        // Blanc joue A1-A2 (liseré 3)
+        captureDirecte.play("A1-A2", "blanc");
+
+        // Noir doit jouer depuis liseré 3. B6 est liseré 2, D6 est liseré 1...
+        // F6 est liseré 2, E6 est liseré 3!
+        // E6 peut aller vers E3 (3 cases, liseré 1)
+        captureDirecte.play("E6-E3", "noir"); // vers liseré 1
+
+        // Blanc doit jouer depuis liseré 1. C1 (licorne) est liseré 2...
+        // D1 est liseré 3, E1 est liseré 1!
+        captureDirecte.play("E1-E2", "blanc"); // vers liseré 3
+
+        // Noir doit jouer depuis liseré 3. C3 (paladin) est liseré 1...
+        // Cherchons un paladin sur liseré 3
+        String[] coupsNoir = captureDirecte.possiblesMoves("noir");
+        System.out.println("Coups pour noir (liseré 3) : ");
+        for (String c : coupsNoir)
+            System.out.println("  " + c);
+
+        // Forçons la fin de partie en supprimant la licorne
+        System.out.println("\n--- Simulation finale : suppression de la licorne blanche ---");
+        // On recrée un plateau et on simule la capture
+        EscampeBoard finPartie = new EscampeBoard();
+        finPartie.play("C6/A6/B6/D6/E6/F6", "noir");
+        finPartie.play("A2/A1/B1/C1/D1/E1", "blanc"); // Licorne en A2
+        finPartie.play("A6-A2", "noir"); // Paladin A6 capture licorne en A2 (si valide)
+
+        // Vérifions si c'est valide
+        System.out.println("Configuration après tentative de capture :");
+        System.out.println(finPartie);
+        System.out.println("Partie terminée ? " + finPartie.gameOver());
+        System.out.println("Gagnant : " + finPartie.getWinner());
 
         System.out.println("\n=== Fin des tests ===");
     }
