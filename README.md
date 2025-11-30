@@ -1,6 +1,6 @@
 # Escampe - TP Intelligence Artificielle
 
-Projet de jeu Escampe pour le cours d'IA - Polytech Paris-Saclay 2025-2026.
+Projet de jeu Escampe pour le cours d'IA - Polytech Paris-Saclay 2025-2026
 
 **Auteurs :** Alban Sellier & Remi Geraud
 
@@ -10,7 +10,7 @@ Escampe est un jeu de plateau à deux joueurs (Noir et Blanc) sur un plateau 6x6
 
 ## Prérequis
 
-- Java 11 ou supérieur
+- Java
 - Gradle
 
 ## Compilation
@@ -18,13 +18,13 @@ Escampe est un jeu de plateau à deux joueurs (Noir et Blanc) sur un plateau 6x6
 Pour compiler le projet :
 
 ```bash
-./gradlew build
+gradle build
 ```
 
 Ou pour nettoyer et recompiler :
 
 ```bash
-./gradlew clean build
+gradle clean build
 ```
 
 ## Exécution
@@ -32,7 +32,7 @@ Ou pour nettoyer et recompiler :
 Pour exécuter les tests de démonstration :
 
 ```bash
-./gradlew run
+gradle run
 ```
 
 ## Structure du projet
@@ -125,16 +125,3 @@ Exemple :
 4. **Contraintes** : Pas de passage par une case occupée, pas de retour sur une case déjà traversée, pas de diagonale.
 
 5. **Fin de partie** : Un paladin capture la licorne adverse.
-
-## Carte des liserés
-
-```
-  A B C D E F
-6 3 2 2 1 3 2
-5 1 3 1 3 1 2
-4 2 1 3 2 3 1
-3 2 3 1 2 1 3
-2 3 1 3 1 3 2
-1 1 2 2 3 1 2
-```
-
