@@ -88,8 +88,8 @@ public class EscampeMove {
 
         moveStr = moveStr.trim().toUpperCase();
 
-        // Cas PASS
-        if (moveStr.equals("E")) {
+        // On accepte "E" et "PASSE" comme coup pour passer son tour
+        if (moveStr.equals("E") || moveStr.equals("PASSE")) {
             return new EscampeMove();
         }
 
@@ -192,7 +192,8 @@ public class EscampeMove {
     public String toString() {
         switch (type) {
             case PASS:
-                return "E";
+                // On retourne "PASSE" pour être compatible avec l'arbitre
+                return "PASSE";
             case MOVE:
                 return "" + colToLetter(fromCol) + rowToDigit(fromRow) +
                         "-" + colToLetter(toCol) + rowToDigit(toRow);

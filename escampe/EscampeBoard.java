@@ -7,22 +7,22 @@ import java.util.Set;
 
 /**
  * Classe représentant le plateau du jeu Escampe
- * Implémente l'interface Partie1 (opérations de base)
+ * On implémente l'interface Partie1 pour les opérations de base
  * 
- * Le plateau est un tableau 6x6 avec des cases de type liseré 1, 2 ou 3
+ * On utilise un tableau 6x6 avec des cases de type liseré 1, 2 ou 3
  * qui déterminent la distance de déplacement possible.
  * 
  * Représentation interne :
- * - boardGrid[row][col] : contient le type de pièce sur la case
+ * - boardGrid[row][col] : on stocke le type de pièce sur la case
  * - row : 0-5 correspond aux lignes 1-6
  * - col : 0-5 correspond aux colonnes A-F
  */
 public class EscampeBoard implements Partie1 {
 
-    // Taille du plateau
+    // On définit la taille du plateau
     public static final int GRID_SIZE = 6;
 
-    // Types de pièces sur le plateau
+    // On définit les types de pièces sur le plateau
     public enum Piece {
         EMPTY('-'),
         LICORNE_NOIRE('N'),
@@ -277,8 +277,8 @@ public class EscampeBoard implements Partie1 {
             String[] possibles = possiblesMoves(player);
 
             if (m.isPass()) {
-                // Vérifier qu'aucun autre coup n'est possible
-                return possibles.length == 1 && possibles[0].equals("PASS");
+                // On vérifie qu'aucun autre coup n'est possible
+                return possibles.length == 1 && possibles[0].equals("PASSE");
             }
 
             for (String possible : possibles) {
@@ -327,9 +327,9 @@ public class EscampeBoard implements Partie1 {
                 }
             }
 
-            // Si aucun coup possible, on peut passer son tour
+            // On passe son tour si aucun coup n'est possible
             if (moves.isEmpty()) {
-                moves.add(new EscampeMove()); // PASS
+                moves.add(new EscampeMove()); // On ajoute le coup PASSE
             }
         }
 
