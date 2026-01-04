@@ -278,7 +278,7 @@ public class EscampeBoard implements Partie1 {
 
             if (m.isPass()) {
                 // On vérifie qu'aucun autre coup n'est possible
-                return possibles.length == 1 && possibles[0].equals("PASSE");
+                return possibles.length == 1 && possibles[0].equals("E");
             }
 
             for (String possible : possibles) {

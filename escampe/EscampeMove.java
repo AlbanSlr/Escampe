@@ -192,8 +192,8 @@ public class EscampeMove {
     public String toString() {
         switch (type) {
             case PASS:
-                // On retourne "PASSE" pour être compatible avec l'arbitre
-                return "PASSE";
+                // On retourne "E" pour être compatible avec l'arbitre (format PDF)
+                return "E";
             case MOVE:
                 return "" + colToLetter(fromCol) + rowToDigit(fromRow) +
                         "-" + colToLetter(toCol) + rowToDigit(toRow);

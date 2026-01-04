@@ -66,7 +66,7 @@ public class Solo {
 	private static IJoueur getDefaultPlayer(String s) {
 		System.out.println(s + " : defaultPlayer");
 		// On retourne notre joueur IA par défaut
-		return new MonJoueur();
+		return new AlbanRemi();
 	}
 
 	/**
