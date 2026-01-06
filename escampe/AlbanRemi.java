@@ -31,7 +31,7 @@ public class AlbanRemi implements IJoueur {
     private static final int DEFAITE = -100000;
 
     // On gère le temps : 10 secondes max par coup
-    private static final long TEMPS_MAX_PAR_COUP = 10000;
+    private static final long TEMPS_MAX_PAR_COUP = 12000;
     private long debutReflexion;
     private boolean timeout;
 
@@ -197,6 +197,18 @@ public class AlbanRemi implements IJoueur {
 
     // ==================== PLACEMENT INTELLIGENT ====================
 
+    // Noir placé en haut (lignes 5-6)
+    private static final String PLACEMENTS_NOIR_HAUT ="A6/A5/C5/D5/E5/F5";
+
+    // Noir placé en bas
+    private static final String PLACEMENTS_NOIR_BAS ="A1/A2/F1/D1/C2/E2";
+
+    // Blanc placé en bas (lignes 1-2)
+    private static final String PLACEMENTS_BLANC_BAS ="A1/A2/F1/D1/C2/E2";
+
+    // Blanc placé en haut
+    private static final String PLACEMENTS_BLANC_HAUT ="A6/A5/C5/D5/E5/F5";
+
     /**
      * Génère un placement intelligent en évaluant plusieurs configurations
      * 
@@ -207,273 +219,37 @@ public class AlbanRemi implements IJoueur {
      * 4. Les paladins autour de la licorne (protection)
      */
     private String getPlacementIntelligent(String couleur) {
-        boolean isNoir = couleur.equals("noir");
+    boolean isNoir = couleur.equals("noir");
 
-        // Déterminer sur quel bord placer
-        boolean placerEnHaut = true;
+    // Déterminer si on joue en haut ou en bas
+    boolean placerEnHaut = true;
 
-        if (!isNoir) {
-            // Blanc doit placer sur le bord opposé à Noir
-            boolean noirEnBas = false;
-            for (int row = 0; row < 2; row++) {
-                for (int col = 0; col < 6; col++) {
-                    if (plateau.getPiece(row, col).isBlack()) {
-                        noirEnBas = true;
-                        break;
-                    }
-                }
-            }
-            placerEnHaut = noirEnBas;
-        }
-
-        // Générer et évaluer plusieurs placements
-        ArrayList<String> placements = genererPlacementsCandidats(placerEnHaut);
-
-        String meilleurPlacement = placements.get(0);
-        int meilleureEval = DEFAITE;
-
-        for (String placement : placements) {
-            EscampeBoard copie = new EscampeBoard(plateau);
-            copie.play(placement, couleur);
-
-            int eval = evaluerPlacement(copie, couleur, placerEnHaut);
-
-            if (eval > meilleureEval) {
-                meilleureEval = eval;
-                meilleurPlacement = placement;
-            }
-        }
-
-        System.out.println("[IA] Placement choisi (score=" + meilleureEval + ") : " + meilleurPlacement);
-        return meilleurPlacement;
-    }
-
-    /**
-     * Génère une liste de placements candidats stratégiques
-     */
-    private ArrayList<String> genererPlacementsCandidats(boolean enHaut) {
-        ArrayList<String> placements = new ArrayList<>();
-
-        int row1 = enHaut ? 5 : 0; // Ligne du bord
-        int row2 = enHaut ? 4 : 1; // Ligne intérieure
-
-        // On génère des placements avec la licorne sur différentes positions
-        // Priorité aux cases liseré 1 et centrales
-        int[][] positionsLicorne = {
-                { row1, 3 }, // D6 ou D1 (liseré 1)
-                { row2, 2 }, // C5 ou C2 (liseré 1)
-                { row2, 4 }, // E5 ou E2 (liseré 1)
-                { row1, 0 }, // A6 ou A1 (liseré 3 mais coin)
-                { row2, 1 }, // B5 ou B2 (liseré 3)
-                { row1, 2 }, // C6 ou C1 (liseré 2)
-                { row1, 4 }, // E6 ou E1 (liseré 3)
-        };
-
-        for (int[] posLicorne : positionsLicorne) {
-            int licRow = posLicorne[0];
-            int licCol = posLicorne[1];
-
-            // Générer des configurations de paladins autour de la licorne
-            ArrayList<int[]> casesPaladins = new ArrayList<>();
-
-            // Collecter toutes les cases disponibles sur les deux lignes
-            for (int row : new int[] { row1, row2 }) {
-                for (int col = 0; col < 6; col++) {
-                    if (row != licRow || col != licCol) {
-                        casesPaladins.add(new int[] { row, col });
-                    }
-                }
-            }
-
-            // Trier les cases par proximité à la licorne puis par liseré
-            final int lRow = licRow;
-            final int lCol = licCol;
-            casesPaladins.sort((a, b) -> {
-                int distA = Math.abs(a[0] - lRow) + Math.abs(a[1] - lCol);
-                int distB = Math.abs(b[0] - lRow) + Math.abs(b[1] - lCol);
-                if (distA != distB)
-                    return distA - distB;
-                // À distance égale, préférer les liserés variés
-                return LISERES[a[0]][a[1]] - LISERES[b[0]][b[1]];
-            });
-
-            // Prendre les 5 premières cases (les plus proches)
-            if (casesPaladins.size() >= 5) {
-                StringBuilder sb = new StringBuilder();
-                sb.append(toCase(licRow, licCol));
-
-                // S'assurer d'avoir au moins un paladin de chaque liseré si possible
-                boolean[] lisereUtilise = new boolean[4];
-                ArrayList<int[]> paladinsChoisis = new ArrayList<>();
-
-                for (int[] pos : casesPaladins) {
-                    int lisere = LISERES[pos[0]][pos[1]];
-                    if (!lisereUtilise[lisere] && paladinsChoisis.size() < 5) {
-                        paladinsChoisis.add(pos);
-                        lisereUtilise[lisere] = true;
-                    }
-                }
-
-                // Compléter avec les cases restantes si on n'a pas 5 paladins
-                for (int[] pos : casesPaladins) {
-                    if (paladinsChoisis.size() >= 5)
-                        break;
-                    boolean dejaPris = false;
-                    for (int[] p : paladinsChoisis) {
-                        if (p[0] == pos[0] && p[1] == pos[1]) {
-                            dejaPris = true;
-                            break;
-                        }
-                    }
-                    if (!dejaPris) {
-                        paladinsChoisis.add(pos);
-                    }
-                }
-
-                for (int[] pos : paladinsChoisis) {
-                    sb.append("/").append(toCase(pos[0], pos[1]));
-                }
-
-                placements.add(sb.toString());
-            }
-        }
-
-        // Ajouter des placements bien étalés qui couvrent TOUS les liserés
-        // IMPORTANT : avoir des pièces sur tout le plateau, pas groupées dans un coin
-        if (enHaut) {
-            // Placements étalés avec licorne en sécurité (liseré 1) et paladins sur tous
-            // les liserés
-            placements.add("D6/A5/B6/C5/E5/F6"); // Licorne D6(l1), paladins sur l1,l2,l3
-            placements.add("E5/A5/B6/C5/D5/F6"); // Licorne E5(l1), paladins étalés
-            placements.add("C5/A5/B5/D6/E5/F5"); // Licorne C5(l1), paladins étalés
-            placements.add("D5/A5/B6/C6/E6/F5"); // Licorne D5(l3), paladins couvrant bien
-            placements.add("B5/A5/C5/D5/E6/F6"); // Licorne B5(l3), ligne 5 complète
-            // Placements avec plus de couverture sur liseré 2
-            placements.add("D6/A6/B5/C6/E6/F5"); // Licorne D6(l1)
-            placements.add("E5/A6/B5/C6/D5/F6"); // Licorne E5(l1)
-        } else {
-            // Placements étalés pour Blanc (lignes 1 et 2)
-            placements.add("D1/A2/B1/C2/E2/F1"); // Licorne D1(l1), paladins sur l1,l2,l3
-            placements.add("E2/A2/B1/C2/D2/F1"); // Licorne E2(l1), paladins étalés
-            placements.add("C2/A2/B2/D1/E2/F2"); // Licorne C2(l1), paladins étalés
-            placements.add("D2/A2/B1/C1/E1/F2"); // Licorne D2(l1), paladins couvrant bien
-            placements.add("B2/A2/C2/D2/E1/F1"); // Licorne B2(l3), ligne 2 + extrémités
-            // Placements avec plus de couverture
-            placements.add("D1/A1/B2/C1/E1/F2"); // Licorne D1(l1)
-            placements.add("E2/A1/B2/C1/D2/F1"); // Licorne E2(l1)
-        }
-
-        return placements;
-    }
-
-    /**
-     * Évalue un placement initial
-     */
-    private int evaluerPlacement(EscampeBoard board, String couleur, boolean enHaut) {
-        int score = 0;
-
-        EscampeRole monRole = couleur.equals("blanc") ? EscampeRole.BLANC : EscampeRole.NOIR;
-
-        int[] licorne = null;
-        ArrayList<int[]> paladins = new ArrayList<>();
-
-        for (int row = 0; row < 6; row++) {
+    if (!isNoir) {
+        // Blanc : on regarde où Noir a placé ses pièces
+        boolean noirEnBas = false;
+        for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 6; col++) {
-                EscampeBoard.Piece piece = board.getPiece(row, col);
-                if (piece.belongsTo(monRole)) {
-                    if (piece.isLicorne()) {
-                        licorne = new int[] { row, col };
-                    } else if (piece.isPaladin()) {
-                        paladins.add(new int[] { row, col });
-                    }
+                if (plateau.getPiece(row, col).isBlack()) {
+                    noirEnBas = true;
+                    break;
                 }
             }
         }
-
-        if (licorne == null)
-            return DEFAITE;
-
-        // CRITÈRE CRITIQUE : Couvrir les 3 liserés avec REDONDANCE
-        // On veut au moins 2 pièces par liseré pour ne pas être bloqué facilement
-        int[] compteurLiseres = new int[4];
-        compteurLiseres[LISERES[licorne[0]][licorne[1]]]++;
-        for (int[] paladin : paladins) {
-            compteurLiseres[LISERES[paladin[0]][paladin[1]]]++;
-        }
-
-        for (int i = 1; i <= 3; i++) {
-            if (compteurLiseres[i] == 0) {
-                score -= 1000; // ÉNORME MALUS si un liseré n'est pas couvert !
-            } else if (compteurLiseres[i] == 1) {
-                score -= 200; // Malus si seulement 1 pièce sur ce liseré (fragile)
-            } else {
-                score += 100; // Bonus pour redondance (2+ pièces sur le liseré)
-            }
-        }
-
-        // Critère 1 : Licorne sur liseré 1 = +80 (difficile à atteindre)
-        int licorneLisere = LISERES[licorne[0]][licorne[1]];
-        if (licorneLisere == 1)
-            score += 80;
-        else if (licorneLisere == 2)
-            score += 40;
-        // Liseré 3 = 0 (le plus facile à atteindre)
-
-        // Critère 2 : Licorne au centre du plateau = bonus
-        int distCentre = Math.abs(licorne[1] - 2) + Math.abs(licorne[1] - 3);
-        score += (4 - distCentre) * 15;
-
-        // Critère 3 : Licorne sur la ligne intérieure (plus protégée) = +40
-        int ligneInterieure = enHaut ? 4 : 1;
-        if (licorne[0] == ligneInterieure)
-            score += 40;
-
-        // Critère 4 : Paladins proches de la licorne (mais pas trop groupés)
-        for (int[] paladin : paladins) {
-            int dist = Math.abs(paladin[0] - licorne[0]) + Math.abs(paladin[1] - licorne[1]);
-            if (dist == 1)
-                score += 15; // Adjacent = bien
-            else if (dist == 2)
-                score += 10; // Proche = bien aussi
-        }
-
-        // Critère 5 : ÉTALEMENT - pénaliser les paladins trop groupés
-        // Calculer la dispersion horizontale (colonnes utilisées)
-        boolean[] colonnesUtilisees = new boolean[6];
-        colonnesUtilisees[licorne[1]] = true;
-        for (int[] paladin : paladins) {
-            colonnesUtilisees[paladin[1]] = true;
-        }
-        int nbColonnes = 0;
-        for (boolean b : colonnesUtilisees) {
-            if (b)
-                nbColonnes++;
-        }
-        score += nbColonnes * 20; // Bonus pour l'étalement horizontal
-
-        // Malus si toutes les pièces sont dans les 3 premières colonnes (coin gauche)
-        boolean toutAGauche = true;
-        boolean toutADroite = true;
-        for (int[] paladin : paladins) {
-            if (paladin[1] >= 3)
-                toutAGauche = false;
-            if (paladin[1] < 3)
-                toutADroite = false;
-        }
-        if (licorne[1] >= 3)
-            toutAGauche = false;
-        if (licorne[1] < 3)
-            toutADroite = false;
-
-        if (toutAGauche || toutADroite) {
-            score -= 200; // Malus pour placement dans un coin
-        }
-
-        return score;
+        placerEnHaut = noirEnBas;
     }
 
-    private String toCase(int row, int col) {
-        return "" + (char) ('A' + col) + (char) ('1' + row);
+    String placementChoisi;
+
+    if (isNoir) {
+        placementChoisi = PLACEMENTS_NOIR_HAUT;
+    } else {
+        placementChoisi = placerEnHaut
+                ? PLACEMENTS_BLANC_HAUT
+                : PLACEMENTS_BLANC_BAS;
+    }
+
+    System.out.println("[IA] Placement initial choisi : " + placementChoisi);
+    return placementChoisi;
     }
 
     // ==================== ALPHA-BETA ====================
@@ -691,7 +467,7 @@ public class AlbanRemi implements IJoueur {
 
         // Bonus énorme si l'adversaire est bloqué
         if (coupsAdverses.length == 0 || (coupsAdverses.length == 1 && coupsAdverses[0].equals("E"))) {
-            score += 5000;
+            score += 2000;
         }
         // Bonus si on a plus de mobilité
         score += (mesCoups.length - coupsAdverses.length) * 5;
@@ -714,9 +490,9 @@ public class AlbanRemi implements IJoueur {
 
             // Bonus si très proche (menace imminente)
             if (distanceMinAttaque == 1) {
-                score += 800; // On peut capturer au prochain tour !
+                score += 3000; // On peut capturer au prochain tour !
             } else if (distanceMinAttaque == 2) {
-                score += 300;
+                score += 800;
             }
 
             // Malus proportionnel à la distance
@@ -771,9 +547,9 @@ public class AlbanRemi implements IJoueur {
         if (maLicorne != null) {
             int lisere = LISERES[maLicorne[0]][maLicorne[1]];
             if (lisere == 1)
-                score += 20; // Difficile à atteindre
+                score += 40; // Difficile à atteindre
             else if (lisere == 3)
-                score -= 10; // Facile à atteindre
+                score -= 20; // Facile à atteindre
         }
 
         // === CRITÈRE 6 : CONTRÔLE DES LISERÉS AVEC REDONDANCE (CRITIQUE !) ===
@@ -790,7 +566,7 @@ public class AlbanRemi implements IJoueur {
             if (compteurLiseres[i] == 0) {
                 score -= 2000; // ÉNORME MALUS - on peut être bloqué !
             } else if (compteurLiseres[i] == 1) {
-                score -= 300; // Malus - position fragile, une seule pièce sur ce liseré
+                score -= 200; // Malus - position fragile, une seule pièce sur ce liseré
             } else {
                 score += 100; // Bonus pour redondance
             }
